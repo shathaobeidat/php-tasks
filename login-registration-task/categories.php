@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once 'config/db.php';
-
+require_once 'classes/function.php';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
@@ -9,8 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
     if (empty($cat_name)) {
         $error = "Category name is required!";
     } else {
-        $stmt = $pdo->prepare("INSERT INTO categories (category_name) VALUES (?)");
-        $stmt->execute([$cat_name]);
+        $stmt = new DB_con();
+        $ans=$stmt->cat_insert($cat_name);
         header("Location: categories.php");
         exit();
     }
@@ -18,14 +18,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_category'])) {
 
 if (isset($_GET['delete_id'])) {
     $del_id = $_GET['delete_id'];
-    $stmt = $pdo->prepare("DELETE FROM categories WHERE id = ?");
-    $stmt->execute([$del_id]);
+    $stmt = NEW DB_con();
+    $stmt->cat_delete($del_id);
     header("Location: categories.php");
     exit();
 }
 
-$stmt = $pdo->query("SELECT * FROM categories");
-$categories = $stmt->fetchAll();
+$readstmt = new DB_con();
+$categories = $readstmt->cat_read();
 ?>
 <!DOCTYPE html>
 <html lang="en">

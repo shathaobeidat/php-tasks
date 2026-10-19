@@ -1,17 +1,23 @@
 <?php
 session_start();
 require_once 'config/db.php';
+require_once 'classes/function.php';
 $username = $_SESSION['username'] ?? 'Admin';
 $error = '';
 $prod_error = '';
 
-
 if (isset($_GET['delete_product_id'])) {
     $del_p_id = $_GET['delete_product_id'];
-    $stmt = $pdo->prepare("DELETE FROM products WHERE id = ?");
-    $stmt->execute([$del_p_id]);
+$del=new DB_con();
+$sql=$del->delete_p($del_p_id);
     header("Location: " . strtok($_SERVER['REQUEST_URI'], '?'));
     exit();
+}
+if ($_SERVER["REQUEST_METHOD"] === "POST" ) {
+    $del_u_id = $_POST['delete-user'];
+$del=new DB_con();
+$sql=$del->delete_u($del_u_id);
+
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_user_submit'])) {
@@ -30,16 +36,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_user_submit'])) {
             $error = "Email is already registered. Please use another one.";
         } else {
             $hashed_password = password_hash($pass, PASSWORD_DEFAULT);
-            $insertStmt = $pdo->prepare("INSERT INTO person (name, email, password) VALUES (?, ?, ?)");
-            if ($insertStmt->execute([$name, $email, $hashed_password])) {
-                header("Location: " . $_SERVER['PHP_SELF']);
-                exit();
-            } else {
-                $error = "Something went wrong, please try again later.";
+$insert=new DB_con();
+$sql=$insert->insert($name,$email,$hashed_password);
+if($sql)
+$success = "user was added successfully.";
+else
+       $error = "Something went wrong, please try again later.";
             }
         }
     }
-}
+
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_product_submit'])) {
     $p_name = trim($_POST['product_name'] ?? '');
     $p_desc = trim($_POST['description'] ?? '');
@@ -50,36 +56,32 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['add_product_submit'])
     if (empty($p_name) || empty($p_price) || empty($p_qty)) {
         $prod_error = "Product name, price, and quantity are required!";
     } else {
-        $insertProd = $pdo->prepare("INSERT INTO products (product_name, description, price, quantity, category_id, created_date) VALUES (?, ?, ?, ?, ?, NOW())");
-        if ($insertProd->execute([$p_name, $p_desc, $p_price, $p_qty, $p_cat])) {
+$insert_p=new DB_con();
+$sql=$insert_p->insert_pro($p_name,$p_desc,$p_price,$p_qty,$p_cat);
+  if ($sql) {
             header("Location: " . $_SERVER['PHP_SELF']);
             exit();
-        } else {
+        } else 
+        {
             $prod_error = "Failed to add product.";
         }
     }
 }
 
+$user_read=new DB_con();
+$readusers=$user_read->read_user();
 
-$users_stmt = $pdo->query("SELECT id, name, email FROM person");
-$users = $users_stmt->fetchAll();
-
-
-$cat_stmt=$pdo->query("SELECT id ,category_name FROM CATEGORIES");
-$categories=$cat_stmt->fetchAll();
+$cat_read=new DB_con();
+$categories=$cat_read->cat_read();
 
 try {
-    $prod_stmt = $pdo->query("
-        SELECT p.id, p.product_name, p.description, p.price, p.quantity, p.created_date, c.category_name 
-        FROM products p 
-        LEFT JOIN categories c ON p.category_id = c.id
-    ");
-    $products = $prod_stmt->fetchAll();
+  $pro_read=new DB_con();
+    $products = $pro_read->pro_read();
 } catch (PDOException $e) {
     $products = [];
 }
 
-$total_users = count($users);
+$total_users = count($readusers);
 $total_products = count($products);
 ?>
 <!DOCTYPE html>
@@ -128,14 +130,17 @@ $total_products = count($products);
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($users as $user): ?>
+                <?php foreach ($readusers as $user): ?>
                     <tr>
                         <td><?php echo htmlspecialchars($user['id']); ?></td>
                         <td><?php echo htmlspecialchars($user['name']); ?></td>
                         <td><?php echo htmlspecialchars($user['email']); ?></td>
                         <td>
                             <a href="update.php?id=<?php echo $user['id']; ?>" style="color: blue; text-decoration: none;">Edit</a> | 
-                            <button type="button" onclick="if(confirm('Are you sure you want to delete this user?')) { window.location.href='?delete_user_id=<?php echo $user['id']; ?>'; }" style="color: red; background-color: white; border: none; cursor: pointer;">Delete</button>
+                          <form action="dashboard.php" method="post">
+<input type="hidden" name="delete-user" value="<?php echo $user['id']?>" >
+<button type="submit"  onclick="confirm(are you sure you want delete this user?)">Delete</button>
+      </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>
@@ -146,7 +151,7 @@ $total_products = count($products);
     <div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2>Product Management</h2>
-            <button type="button" class="btn btn--primary" id="prod-add-btn" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">+ Add Product</button>
+  <button type="button" class="btn btn--primary" id="prod-add-btn" style="background: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">+ Add Product</button>
         </div>
 
         <table>

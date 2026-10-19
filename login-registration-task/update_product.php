@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once 'config/db.php';
-
+require_once 'classes/function.php';
 $error = '';
 $success = '';
 $product = null;
@@ -31,9 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($p_name) || empty($p_price) || empty($p_qty)) {
         $error = "Product name, price, and quantity are required!";
     } else {
-       
-        $updateStmt = $pdo->prepare("UPDATE products SET product_name = ?, description = ?, price = ?, quantity = ?, category_id = ? WHERE id = ?");
-        if ($updateStmt->execute([$p_name, $p_desc, $p_price, $p_qty, $p_cat, $id])) {
+       $update= new DB_con();
+       $sql=$update-> update_pro($p_name,$p_desc,$p_price,$p_qty,$p_cat,$id);
+        if ($sql) {
             $success = "Product updated successfully!";
             $product['product_name'] = $p_name;
             $product['description'] = $p_desc;
